@@ -11,26 +11,25 @@ interface GameStatusProps {
 export function GameStatus({ gameState, gameOver, error, onPlayAgain, onLeave }: GameStatusProps) {
     if (gameOver) {
         return (
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center">
-                <div className="text-3xl mb-6">
-                    {gameOver.result === 'win' && <span className="text-green-400">🎉 You Won!</span>}
-                    {gameOver.result === 'loss' && <span className="text-red-400">😔 You Lost</span>}
-                    {gameOver.result === 'draw' && <span className="text-yellow-400">🤝 Draw!</span>}
-                    {gameOver.result === 'forfeit' && <span className="text-green-400">🏆 {gameOver.winner} wins by forfeit!</span>}
+            <div className="text-center animate-fade-in py-12">
+                <div className="text-6xl font-black mb-6 tracking-tighter leading-none">
+                    {gameOver.result === 'win' && 'VICTORY'}
+                    {gameOver.result === 'loss' && 'DEFEAT'}
+                    {gameOver.result === 'draw' && 'DRAW'}
+                    {gameOver.result === 'forfeit' && 'OPPONENT FORFEIT'}
                 </div>
                 <div className="flex gap-4 justify-center">
                     <button
                         onClick={onPlayAgain}
-                        className="px-6 py-3 font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600
-                       text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40
-                       transition-all duration-200"
+                        className="px-8 py-3 text-sm font-bold tracking-widest uppercase bg-black text-white
+                       hover:bg-stone-800 transition-all active:scale-[0.98]"
                     >
                         Play Again
                     </button>
                     <button
                         onClick={onLeave}
-                        className="px-6 py-3 font-semibold rounded-xl bg-white/10 text-white border border-white/20
-                       hover:bg-white/15 transition-all duration-200"
+                        className="px-8 py-3 text-sm font-bold tracking-widest uppercase border-2 border-zinc-200 text-black
+                       hover:bg-zinc-100 transition-all active:scale-[0.98]"
                     >
                         Leave
                     </button>
@@ -40,26 +39,32 @@ export function GameStatus({ gameState, gameOver, error, onPlayAgain, onLeave }:
     }
 
     return (
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl px-8 py-5
-                    flex items-center justify-between gap-8 min-w-[500px]">
-            <div className="flex flex-col gap-1">
-                <span className="text-slate-400 text-sm">vs {gameState?.opponent || 'Unknown'}</span>
-                <span className={`text-xl font-semibold ${gameState?.yourTurn ? 'text-green-400' : 'text-white'}`}>
-                    {gameState?.yourTurn ? '🟢 Your Turn' : "⏳ Opponent's Turn"}
+        <div className="w-full max-w-2xl py-6 flex items-center justify-between border-b-2 border-stone-200">
+            <div className="flex flex-col">
+                <span className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-1">Opponent</span>
+                <span className="text-xl font-bold tracking-tight">{gameState?.opponent || 'Unknown'}</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+                <span className={`text-sm font-bold tracking-widest uppercase ${gameState?.yourTurn ? 'text-black' : 'text-stone-300'}`}>
+                    {gameState?.yourTurn ? 'Your Turn' : "Waiting..."}
                 </span>
             </div>
 
-            <div className="flex items-center gap-3 text-slate-400">
-                <span>You are:</span>
-                <div
-                    className={`w-8 h-8 rounded-full shadow-lg
-            ${gameState?.yourColor === 1 ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-500/40' : ''}
-            ${gameState?.yourColor === 2 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-yellow-500/40' : ''}
+            <div className="flex flex-col items-end">
+                <span className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-1">You</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold">Player {gameState?.yourColor}</span>
+                    <div
+                        className={`w-3 h-3 rounded-full border border-black
+            ${gameState?.yourColor === 1 ? 'bg-red-500' : ''}
+            ${gameState?.yourColor === 2 ? 'bg-yellow-400' : ''}
           `}
-                />
+                    />
+                </div>
             </div>
 
-            {error && <div className="text-red-400 text-sm">{error}</div>}
+            {error && <div className="absolute top-full left-0 right-0 mt-2 text-red-500 text-xs font-mono text-center">{error}</div>}
         </div>
     );
 }

@@ -27,50 +27,43 @@ export function Leaderboard() {
     };
 
     return (
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 min-w-[300px]">
-            <h2 className="text-white text-xl font-bold mb-4">🏆 Leaderboard</h2>
-
+        <div className="w-full">
             {loading && (
-                <p className="text-slate-400 text-center py-6">Loading...</p>
+                <p className="text-stone-400 text-center font-mono py-6">LOADING DATA...</p>
             )}
 
             {error && (
-                <p className="text-red-400 text-center py-6">{error}</p>
+                <p className="text-red-500 text-center font-mono py-6">{error}</p>
             )}
 
             {!loading && !error && entries.length === 0 && (
-                <p className="text-slate-400 text-center py-6">No games played yet. Be the first!</p>
+                <p className="text-stone-400 text-center font-mono py-6">NO RECORDS YET</p>
             )}
 
             {!loading && !error && entries.length > 0 && (
-                <table className="w-full">
+                <table className="w-full border-collapse">
                     <thead>
-                        <tr>
-                            <th className="text-left p-2 text-slate-400 font-medium text-sm border-b border-white/10">Rank</th>
-                            <th className="text-left p-2 text-slate-400 font-medium text-sm border-b border-white/10">Player</th>
-                            <th className="text-left p-2 text-slate-400 font-medium text-sm border-b border-white/10">Wins</th>
-                            <th className="text-left p-2 text-slate-400 font-medium text-sm border-b border-white/10">Games</th>
+                        <tr className="border-b border-black">
+                            <th className="text-left py-4 font-mono text-xs text-stone-500 uppercase tracking-widest">Rank</th>
+                            <th className="text-left py-4 font-mono text-xs text-stone-500 uppercase tracking-widest">Player</th>
+                            <th className="text-right py-4 font-mono text-xs text-stone-500 uppercase tracking-widest">Wins</th>
+                            <th className="text-right py-4 font-mono text-xs text-stone-500 uppercase tracking-widest">Games</th>
                         </tr>
                     </thead>
                     <tbody>
                         {entries.map((entry) => (
                             <tr
                                 key={entry.username}
-                                className={`
-                  ${entry.rank === 1 ? 'bg-yellow-500/10' : ''}
-                  ${entry.rank === 2 ? 'bg-slate-400/10' : ''}
-                  ${entry.rank === 3 ? 'bg-amber-700/10' : ''}
-                `}
+                                className="border-b border-stone-200 hover:bg-stone-100 transition-colors"
                             >
-                                <td className="p-3 text-white text-xl">
-                                    {entry.rank === 1 && '🥇'}
-                                    {entry.rank === 2 && '🥈'}
-                                    {entry.rank === 3 && '🥉'}
-                                    {entry.rank > 3 && `#${entry.rank}`}
+                                <td className="py-4 font-mono text-sm">
+                                    {entry.rank.toString().padStart(2, '0')}
                                 </td>
-                                <td className="p-3 text-white font-semibold">{entry.username}</td>
-                                <td className="p-3 text-white">{entry.wins}</td>
-                                <td className="p-3 text-white">{entry.games}</td>
+                                <td className={`py-4 ${entry.rank <= 3 ? 'font-bold' : ''}`}>
+                                    {entry.username}
+                                </td>
+                                <td className="py-4 text-right font-mono text-stone-600">{entry.wins}</td>
+                                <td className="py-4 text-right font-mono text-stone-400">{entry.games}</td>
                             </tr>
                         ))}
                     </tbody>

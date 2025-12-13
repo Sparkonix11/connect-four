@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
-import { Lobby } from './components/Lobby';
-import { Board } from './components/Board';
-import { GameStatus } from './components/GameStatus';
-import { Leaderboard } from './components/Leaderboard';
+import { PlayTab } from './components/PlayTab';
+import { LeaderboardTab } from './components/LeaderboardTab';
 
 function App() {
+    const [activeTab, setActiveTab] = useState<'play' | 'leaderboard'>('play');
     const [username, setUsername] = useState<string | null>(null);
     const { connected, gameState, queuePosition, error, gameOver, joinQueue, makeMove, leaveGame } = useWebSocket(username);
 
@@ -16,60 +15,68 @@ function App() {
     }, [joinQueue]);
 
     const handlePlayAgain = useCallback(() => {
-        joinQueue();
-    }, [joinQueue]);
+        // Leave current game and join queue again
+        leaveGame();
+        setTimeout(() => joinQueue(), 100);
+    }, [joinQueue, leaveGame]);
 
     const handleLeave = useCallback(() => {
         leaveGame();
         setUsername(null);
     }, [leaveGame]);
 
-    // Show lobby if no username or not in game
-    if (!username || (!gameState && queuePosition === null && !gameOver)) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex">
-                <div className="flex-1 flex items-center justify-center">
-                    <Lobby onJoin={handleJoin} queuePosition={queuePosition} connected={connected || !username} />
-                </div>
-                <div className="w-80 p-6 flex items-center">
-                    <Leaderboard />
-                </div>
-            </div>
-        );
-    }
-
-    // Show game
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center gap-6 p-8">
-            <GameStatus
-                gameState={gameState}
-                gameOver={gameOver}
-                error={error}
-                onPlayAgain={handlePlayAgain}
-                onLeave={handleLeave}
-            />
+        <div className="min-h-screen bg-[#F3F3F1] flex flex-col font-sans text-stone-900 selection:bg-stone-300">
+            {/* Minimal Navigation */}
+            <nav className="flex-none p-8 flex justify-between items-center max-w-7xl mx-auto w-full">
+                <div className="text-xl font-bold tracking-tight">
+                    CONNECT / FOUR
+                </div>
+                <div className="flex gap-8">
+                    <button
+                        onClick={() => setActiveTab('play')}
+                        className={`text-sm tracking-widest uppercase transition-all duration-300 ${activeTab === 'play'
+                            ? 'font-bold border-b-2 border-black'
+                            : 'text-stone-500 hover:text-black'
+                            }`}
+                    >
+                        Play
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('leaderboard')}
+                        className={`text-sm tracking-widest uppercase transition-all duration-300 ${activeTab === 'leaderboard'
+                            ? 'font-bold border-b-2 border-black'
+                            : 'text-stone-500 hover:text-black'
+                            }`}
+                    >
+                        Leaderboard
+                    </button>
+                </div>
+                {/* Placeholder for symmetry or menu */}
+                <div className="w-[100px] text-right text-xs text-stone-400 hidden md:block">
+                    V 1.0
+                </div>
+            </nav>
 
-            {gameState && !gameOver && (
-                <Board
-                    board={gameState.board}
-                    onColumnClick={makeMove}
-                    disabled={!gameState.yourTurn}
-                    yourColor={gameState.yourColor}
-                />
-            )}
-
-            {gameOver?.finalBoard && (
-                <Board
-                    board={gameOver.finalBoard}
-                    onColumnClick={() => { }}
-                    disabled={true}
-                    yourColor={gameState?.yourColor || 1}
-                />
-            )}
-
-            <div className="fixed bottom-4 right-4">
-                <Leaderboard />
-            </div>
+            {/* Content Area */}
+            <main className="flex-1 flex flex-col relative overflow-hidden max-w-7xl mx-auto w-full">
+                {activeTab === 'play' ? (
+                    <PlayTab
+                        username={username}
+                        connected={connected}
+                        gameState={gameState}
+                        queuePosition={queuePosition}
+                        gameOver={gameOver}
+                        error={error}
+                        onJoin={handleJoin}
+                        makeMove={makeMove}
+                        onPlayAgain={handlePlayAgain}
+                        onLeave={handleLeave}
+                    />
+                ) : (
+                    <LeaderboardTab />
+                )}
+            </main>
         </div>
     );
 }
