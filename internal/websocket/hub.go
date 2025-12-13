@@ -102,19 +102,25 @@ func (h *Hub) handleRegister(client *Client) {
 // handleUnregister removes a client and handles disconnection
 func (h *Hub) handleUnregister(client *Client) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	if _, ok := h.clients[client.Username]; ok {
 		delete(h.clients, client.Username)
-		close(client.send)
 
-		// Check if player was in a game
+		// Mark client as closed to prevent further sends
+		client.closed = true
+
+		// Check if player was in a game (before closing channel)
 		if gameID, exists := h.playerGames[client.Username]; exists {
 			if session, ok := h.games[gameID]; ok {
 				h.handleDisconnection(client, session)
 			}
 		}
+
+		// Close the send channel AFTER handling disconnection
+		close(client.send)
 	}
+
+	h.mu.Unlock()
 
 	log.Info().Str("username", client.Username).Msg("Client unregistered")
 }

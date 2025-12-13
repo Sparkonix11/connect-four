@@ -30,6 +30,7 @@ type Client struct {
 	conn     *websocket.Conn
 	send     chan []byte
 	Username string
+	closed   bool
 }
 
 // NewClient creates a new client instance
@@ -115,6 +116,11 @@ func (c *Client) WritePump() {
 
 // SendMessage sends a typed message to the client
 func (c *Client) SendMessage(msgType models.WSMessageType, payload interface{}) {
+	// Don't send if client is closed
+	if c.closed {
+		return
+	}
+
 	data, err := CreateMessage(msgType, payload)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create message")
