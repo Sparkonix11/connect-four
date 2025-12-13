@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: connect-four-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-connect4}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-connect4pass}
+      POSTGRES_DB: ${POSTGRES_DB:-connect4}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-connect4}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka (optional - for analytics)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: connect-four-zk
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    profiles:
+      - kafka
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: connect-four-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    profiles:
+      - kafka
+
+  # Go Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connect-four-backend
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-connect4}:${POSTGRES_PASSWORD:-connect4pass}@postgres:5432/${POSTGRES_DB:-connect4}?sslmode=disable
+      MATCHMAKING_TIMEOUT: 10
+      RECONNECT_TIMEOUT: 30
+      BOT_MOVE_DELAY: 1
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      KAFKA_BROKERS: kafka:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: connect-four-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
