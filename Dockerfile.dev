@@ -1,0 +1,17 @@
+FROM golang:1.25-alpine
+
+WORKDIR /app
+
+# Install git and air for live reloading
+RUN apk add --no-cache git && \
+    go install github.com/air-verse/air@latest
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code (will be overridden by volume mount, but good for caching)
+COPY . .
+
+# Run air
+CMD ["air"]

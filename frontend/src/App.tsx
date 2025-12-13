@@ -6,7 +6,7 @@ import { LeaderboardTab } from './components/LeaderboardTab';
 function App() {
     const [activeTab, setActiveTab] = useState<'play' | 'leaderboard'>('play');
     const [username, setUsername] = useState<string | null>(null);
-    const { connected, gameState, queuePosition, error, gameOver, joinQueue, makeMove, leaveGame } = useWebSocket(username);
+    const { connected, gameState, queuePosition, error, gameOver, joinQueue, makeMove, leaveGame, resetGame } = useWebSocket(username);
 
     const handleJoin = useCallback((name: string) => {
         setUsername(name);
@@ -15,10 +15,10 @@ function App() {
     }, [joinQueue]);
 
     const handlePlayAgain = useCallback(() => {
-        // Leave current game and join queue again
-        leaveGame();
+        // Reset game state without sending leave message (game is already over)
+        resetGame();
         setTimeout(() => joinQueue(), 100);
-    }, [joinQueue, leaveGame]);
+    }, [joinQueue, resetGame]);
 
     const handleLeave = useCallback(() => {
         leaveGame();

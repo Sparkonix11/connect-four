@@ -60,7 +60,9 @@ func (h *MessageHandler) handleJoinQueue(client *Client, payload interface{}) {
 				log.Warn().Str("username", opponent.Username).Msg("Matched opponent not found")
 				return
 			}
-			h.startGame(opponentClient, client, false)
+			// client (the one who was waiting in queue) is Player 1 (first turn)
+			// opponentClient (the one who just joined) is Player 2
+			h.startGame(client, opponentClient, false)
 		},
 		// On timeout - start bot game
 		func() {

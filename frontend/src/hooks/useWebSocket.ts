@@ -25,6 +25,7 @@ interface UseWebSocketReturn {
     joinQueue: () => void;
     makeMove: (column: number) => void;
     leaveGame: () => void;
+    resetGame: () => void;
 }
 
 export function useWebSocket(username: string | null): UseWebSocketReturn {
@@ -187,6 +188,13 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
         setGameOver(null);
     }, [sendMessage]);
 
+    // Reset game state without sending leave message (for play again after game over)
+    const resetGame = useCallback(() => {
+        setGameState(null);
+        setGameOver(null);
+        setError(null);
+    }, []);
+
     useEffect(() => {
         const cleanup = connect();
         return cleanup;
@@ -201,5 +209,6 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
         joinQueue,
         makeMove,
         leaveGame,
+        resetGame,
     };
 }

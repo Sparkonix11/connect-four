@@ -43,7 +43,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: connect-four-backend
     environment:
       SERVER_HOST: 0.0.0.0
@@ -54,6 +54,8 @@ services:
       BOT_MOVE_DELAY: 1
       KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
       KAFKA_BROKERS: kafka:9092
+    volumes:
+      - .:/app
     ports:
       - "8080:8080"
     depends_on:
@@ -69,10 +71,14 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: connect-four-frontend
     ports:
-      - "80:80"
+      - "80:5173" # Vite default port
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./api:/api # Mount API definition for code generation
     depends_on:
       - backend
 
