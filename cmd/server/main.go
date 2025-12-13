@@ -14,6 +14,7 @@ import (
 
 	"connect-four/internal/api"
 	"connect-four/internal/database"
+	"connect-four/internal/kafka"
 	"connect-four/internal/models"
 	"connect-four/pkg/config"
 )
@@ -39,8 +40,23 @@ func main() {
 	}
 	log.Info().Msg("Database migrations completed")
 
-	// Create API server
-	server := api.NewServer(db, cfg)
+	// Create Kafka producer
+	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, cfg.KafkaEnabled)
+	defer kafkaProducer.Close()
+
+	// Create Kafka consumer for analytics
+	kafkaConsumer := kafka.NewConsumer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, "connect-four-analytics", cfg.KafkaEnabled)
+	defer kafkaConsumer.Close()
+
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start Kafka consumer in background
+	go kafkaConsumer.Start(ctx, kafka.ProcessEvent)
+
+	// Create API server with Kafka producer
+	server := api.NewServer(db, cfg, kafkaProducer)
 	server.Start()
 
 	// CORS configuration
@@ -75,10 +91,13 @@ func main() {
 
 	log.Info().Msg("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// Cancel context to stop Kafka consumer
+	cancel()
 
-	if err := httpServer.Shutdown(ctx); err != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 

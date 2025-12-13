@@ -10,6 +10,7 @@ import (
 
 	"connect-four/internal/api/handlers"
 	"connect-four/internal/api/middleware"
+	"connect-four/internal/kafka"
 	"connect-four/internal/matchmaking"
 	"connect-four/internal/repository"
 	ws "connect-four/internal/websocket"
@@ -26,7 +27,7 @@ type Server struct {
 }
 
 // NewServer creates a new API server with all routes configured
-func NewServer(db *gorm.DB, cfg *config.Config) *Server {
+func NewServer(db *gorm.DB, cfg *config.Config, kafkaProducer *kafka.Producer) *Server {
 	router := mux.NewRouter()
 
 	// Create repositories
@@ -42,7 +43,7 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 	// Create WebSocket infrastructure
 	hub := ws.NewHub(cfg.MatchmakingTimeout, cfg.ReconnectTimeout, cfg.BotMoveDelay)
 	matchQueue := matchmaking.NewQueue(cfg.MatchmakingTimeout)
-	messageHandler := ws.NewMessageHandler(hub, matchQueue, playerRepo)
+	messageHandler := ws.NewMessageHandler(hub, matchQueue, playerRepo, kafkaProducer)
 
 	// Create server
 	server := &Server{

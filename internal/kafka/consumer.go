@@ -75,18 +75,54 @@ func (c *Consumer) Start(ctx context.Context, handler func(GameEvent)) {
 	}
 }
 
-// ProcessEvent is a sample handler that logs events
+// ProcessEvent is a handler that processes analytics events from Kafka
 // In production, this would aggregate metrics and store to database
 func ProcessEvent(event GameEvent) {
-	log.Info().
-		Str("type", string(event.Type)).
-		Str("id", event.ID).
-		Interface("data", event.Data).
-		Msg("Processing analytics event")
+	switch event.Type {
+	case EventGameStarted:
+		log.Info().
+			Str("type", string(event.Type)).
+			Str("gameId", event.Data["gameId"].(string)).
+			Str("player1", event.Data["player1"].(string)).
+			Str("player2", event.Data["player2"].(string)).
+			Bool("isBot", event.Data["isBotGame"].(bool)).
+			Msg("Analytics: Game started")
 
-	// TODO: Implement actual analytics aggregation
-	// - Count games per hour
-	// - Track average game duration
-	// - Calculate win rates
-	// - Store aggregated metrics to database
+	case EventGameMove:
+		log.Info().
+			Str("type", string(event.Type)).
+			Str("gameId", event.Data["gameId"].(string)).
+			Str("player", event.Data["player"].(string)).
+			Interface("column", event.Data["column"]).
+			Interface("moveNumber", event.Data["moveNumber"]).
+			Msg("Analytics: Move made")
+
+	case EventGameEnded:
+		log.Info().
+			Str("type", string(event.Type)).
+			Str("gameId", event.Data["gameId"].(string)).
+			Str("winner", event.Data["winner"].(string)).
+			Str("result", event.Data["result"].(string)).
+			Interface("totalMoves", event.Data["totalMoves"]).
+			Msg("Analytics: Game ended")
+
+	case EventPlayerConnected, EventPlayerDisconnected:
+		log.Info().
+			Str("type", string(event.Type)).
+			Str("username", event.Data["username"].(string)).
+			Msg("Analytics: Player event")
+
+	case EventMatchmakingTimeout:
+		log.Info().
+			Str("type", string(event.Type)).
+			Str("username", event.Data["username"].(string)).
+			Interface("waitDuration", event.Data["waitDuration"]).
+			Msg("Analytics: Matchmaking timeout")
+
+	default:
+		log.Debug().
+			Str("type", string(event.Type)).
+			Interface("data", event.Data).
+			Msg("Analytics: Unknown event")
+	}
 }

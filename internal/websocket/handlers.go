@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"connect-four/internal/bot"
 	"connect-four/internal/game"
+	"connect-four/internal/kafka"
 	"connect-four/internal/matchmaking"
 	"connect-four/internal/models"
 	"connect-four/internal/repository"
@@ -15,19 +17,21 @@ import (
 
 // MessageHandler processes incoming WebSocket messages
 type MessageHandler struct {
-	hub        *Hub
-	matchQueue *matchmaking.Queue
-	botEngine  *bot.Bot
-	playerRepo *repository.PlayerRepository
+	hub           *Hub
+	matchQueue    *matchmaking.Queue
+	botEngine     *bot.Bot
+	playerRepo    *repository.PlayerRepository
+	kafkaProducer *kafka.Producer
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(hub *Hub, matchQueue *matchmaking.Queue, playerRepo *repository.PlayerRepository) *MessageHandler {
+func NewMessageHandler(hub *Hub, matchQueue *matchmaking.Queue, playerRepo *repository.PlayerRepository, kafkaProducer *kafka.Producer) *MessageHandler {
 	return &MessageHandler{
-		hub:        hub,
-		matchQueue: matchQueue,
-		botEngine:  bot.NewBot(),
-		playerRepo: playerRepo,
+		hub:           hub,
+		matchQueue:    matchQueue,
+		botEngine:     bot.NewBot(),
+		playerRepo:    playerRepo,
+		kafkaProducer: kafkaProducer,
 	}
 }
 
@@ -111,6 +115,11 @@ func (h *MessageHandler) startGame(player1, player2 *Client, isBot bool) {
 		Str("player1", player1.Username).
 		Str("player2", player2.Username).
 		Msg("Game started")
+
+	// Publish game started event to Kafka
+	if h.kafkaProducer != nil {
+		h.kafkaProducer.PublishGameStarted(context.Background(), session.Game.ID, player1.Username, player2.Username, isBot)
+	}
 }
 
 // startBotGame initializes a game against the bot
@@ -178,6 +187,12 @@ func (h *MessageHandler) handleMakeMove(client *Client, payload interface{}) {
 	}
 	if session.Player1 != nil && session.Player1.Username != client.Username {
 		session.Player1.SendMessage(models.WSTypeMoveMade, moveMadePayload)
+	}
+
+	// Publish move event to Kafka
+	if h.kafkaProducer != nil {
+		moveNum := len(session.Game.Moves)
+		h.kafkaProducer.PublishGameMove(context.Background(), session.Game.ID, client.Username, movePayload.Column, moveNum)
 	}
 
 	// Check if game is over
@@ -365,6 +380,11 @@ func (h *MessageHandler) handleGameOver(session *GameSession) {
 			}
 		}
 		log.Info().Msg("Game stats persisted to database")
+	}
+
+	// Publish game ended event to Kafka
+	if h.kafkaProducer != nil {
+		h.kafkaProducer.PublishGameEnded(context.Background(), session.Game.ID, winnerName, result, 0, len(session.Game.Moves))
 	}
 
 	// Cleanup will happen after some delay or on next message
