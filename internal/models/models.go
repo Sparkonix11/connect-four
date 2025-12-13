@@ -24,10 +24,12 @@ type WSMessageType string
 
 const (
 	// Client -> Server
-	WSTypeJoinQueue WSMessageType = "join_queue"
-	WSTypeMakeMove  WSMessageType = "make_move"
-	WSTypeReconnect WSMessageType = "reconnect"
-	WSTypeLeaveGame WSMessageType = "leave_game"
+	WSTypeJoinQueue      WSMessageType = "join_queue"
+	WSTypeMakeMove       WSMessageType = "make_move"
+	WSTypeReconnect      WSMessageType = "reconnect"
+	WSTypeLeaveGame      WSMessageType = "leave_game"
+	WSTypeResumeSession  WSMessageType = "resume_session"
+	WSTypeAbandonSession WSMessageType = "abandon_session"
 
 	// Server -> Client
 	WSTypeQueueJoined          WSMessageType = "queue_joined"
@@ -40,6 +42,7 @@ const (
 	WSTypeGameForfeited        WSMessageType = "game_forfeited"
 	WSTypeError                WSMessageType = "error"
 	WSTypeGameState            WSMessageType = "game_state"
+	WSTypeExistingSession      WSMessageType = "existing_session"
 )
 
 // WSMessage is the envelope for WebSocket messages
@@ -130,4 +133,11 @@ type GameStatePayload struct {
 	YourColor   int     `json:"yourColor"`   // 1 or 2
 	YourTurn    bool    `json:"yourTurn"`
 	Opponent    string  `json:"opponent"`
+}
+
+// ExistingSessionPayload - sent when player has an active game session
+type ExistingSessionPayload struct {
+	GameID   string `json:"gameId"`
+	Opponent string `json:"opponent"`
+	IsBot    bool   `json:"isBot"`
 }

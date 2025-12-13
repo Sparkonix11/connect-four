@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { PlayTab } from './components/PlayTab';
 import { LeaderboardTab } from './components/LeaderboardTab';
@@ -6,13 +6,33 @@ import { LeaderboardTab } from './components/LeaderboardTab';
 function App() {
     const [activeTab, setActiveTab] = useState<'play' | 'leaderboard'>('play');
     const [username, setUsername] = useState<string | null>(null);
-    const { connected, gameState, queuePosition, error, gameOver, joinQueue, makeMove, leaveGame, resetGame } = useWebSocket(username);
+    const { connected, gameState, queuePosition, error, gameOver, existingSession, joinQueue, makeMove, leaveGame, resetGame, resumeSession, abandonSession } = useWebSocket(username);
+    const hasCheckedSession = useRef(false);
+
+    // Auto-join queue after connection if no existing session
+    useEffect(() => {
+        if (connected && username && !existingSession && !gameState && !gameOver && queuePosition === null && !hasCheckedSession.current) {
+            // Wait a moment to receive potential existing_session message
+            const timer = setTimeout(() => {
+                if (!hasCheckedSession.current) {
+                    hasCheckedSession.current = true;
+                    joinQueue();
+                }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [connected, username, existingSession, gameState, gameOver, queuePosition, joinQueue]);
+
+    // Reset session check when username changes
+    useEffect(() => {
+        hasCheckedSession.current = false;
+    }, [username]);
 
     const handleJoin = useCallback((name: string) => {
         setUsername(name);
-        // Wait a moment for connection, then join queue
-        setTimeout(() => joinQueue(), 100);
-    }, [joinQueue]);
+        hasCheckedSession.current = false;
+        // Auto-join handled by useEffect after connection check
+    }, []);
 
     const handlePlayAgain = useCallback(() => {
         // Reset game state without sending leave message (game is already over)
@@ -68,10 +88,13 @@ function App() {
                         queuePosition={queuePosition}
                         gameOver={gameOver}
                         error={error}
+                        existingSession={existingSession}
                         onJoin={handleJoin}
                         makeMove={makeMove}
                         onPlayAgain={handlePlayAgain}
                         onLeave={handleLeave}
+                        onResumeSession={resumeSession}
+                        onAbandonSession={abandonSession}
                     />
                 ) : (
                     <LeaderboardTab />

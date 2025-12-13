@@ -12,6 +12,8 @@ import type {
     GameForfeitedPayload,
     ErrorPayload,
     GameStatePayload,
+    ExistingSessionPayload,
+    ExistingSession,
 } from '../types';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
@@ -22,10 +24,13 @@ interface UseWebSocketReturn {
     queuePosition: number | null;
     error: string | null;
     gameOver: GameOverState | null;
+    existingSession: ExistingSession | null;
     joinQueue: () => void;
     makeMove: (column: number) => void;
     leaveGame: () => void;
     resetGame: () => void;
+    resumeSession: () => void;
+    abandonSession: () => void;
 }
 
 export function useWebSocket(username: string | null): UseWebSocketReturn {
@@ -34,6 +39,7 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
     const [queuePosition, setQueuePosition] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [gameOver, setGameOver] = useState<GameOverState | null>(null);
+    const [existingSession, setExistingSession] = useState<ExistingSession | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
 
     const connect = useCallback(() => {
@@ -156,6 +162,16 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
                 break;
             }
 
+            case 'existing_session': {
+                const payload = message.payload as ExistingSessionPayload;
+                setExistingSession({
+                    gameId: payload.gameId,
+                    opponent: payload.opponent,
+                    isBot: payload.isBot,
+                });
+                break;
+            }
+
             case 'error': {
                 const payload = message.payload as ErrorPayload;
                 setError(payload.message);
@@ -193,7 +209,20 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
         setGameState(null);
         setGameOver(null);
         setError(null);
+        setExistingSession(null);
     }, []);
+
+    // Resume existing session
+    const resumeSession = useCallback(() => {
+        sendMessage('resume_session', {});
+        setExistingSession(null);
+    }, [sendMessage]);
+
+    // Abandon existing session and start fresh
+    const abandonSession = useCallback(() => {
+        sendMessage('abandon_session', {});
+        setExistingSession(null);
+    }, [sendMessage]);
 
     useEffect(() => {
         const cleanup = connect();
@@ -206,9 +235,12 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
         queuePosition,
         error,
         gameOver,
+        existingSession,
         joinQueue,
         makeMove,
         leaveGame,
         resetGame,
+        resumeSession,
+        abandonSession,
     };
 }

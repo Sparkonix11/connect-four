@@ -87,15 +87,30 @@ func (h *Hub) handleRegister(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// Check if player is reconnecting to an active game
+	h.clients[client.Username] = client
+
+	// Check if player has an active game session
 	if gameID, exists := h.playerGames[client.Username]; exists {
 		if session, ok := h.games[gameID]; ok {
-			h.handleReconnection(client, session)
+			// Send existing session notification to let user choose
+			opponentName := "Bot"
+			if session.Game.Player2 != nil && !session.IsBot {
+				if session.Game.Player1.Username == client.Username {
+					opponentName = session.Game.Player2.Username
+				} else {
+					opponentName = session.Game.Player1.Username
+				}
+			}
+			client.SendMessage(models.WSTypeExistingSession, models.ExistingSessionPayload{
+				GameID:   gameID.String(),
+				Opponent: opponentName,
+				IsBot:    session.IsBot,
+			})
+			log.Info().Str("username", client.Username).Str("gameId", gameID.String()).Msg("Existing session found")
 			return
 		}
 	}
 
-	h.clients[client.Username] = client
 	log.Info().Str("username", client.Username).Msg("Client registered")
 }
 

@@ -43,6 +43,10 @@ func (h *MessageHandler) HandleMessage(client *Client, data []byte) {
 		h.handleMakeMove(client, msg.Payload)
 	case models.WSTypeLeaveGame:
 		h.handleLeaveGame(client)
+	case models.WSTypeResumeSession:
+		h.handleResumeSession(client)
+	case models.WSTypeAbandonSession:
+		h.handleAbandonSession(client)
 	default:
 		client.SendError("Unknown message type")
 	}
@@ -330,4 +334,75 @@ func (h *MessageHandler) findPlayerGame(username string) *GameSession {
 		}
 	}
 	return nil
+}
+
+// handleResumeSession resumes an existing game session
+func (h *MessageHandler) handleResumeSession(client *Client) {
+	h.hub.mu.Lock()
+	defer h.hub.mu.Unlock()
+
+	gameID, exists := h.hub.playerGames[client.Username]
+	if !exists {
+		client.SendError("No active session found")
+		return
+	}
+
+	session, ok := h.hub.games[gameID]
+	if !ok {
+		client.SendError("Session no longer exists")
+		delete(h.hub.playerGames, client.Username)
+		return
+	}
+
+	// Reconnect to the game
+	h.hub.handleReconnection(client, session)
+	log.Info().Str("username", client.Username).Str("gameId", gameID.String()).Msg("Session resumed")
+}
+
+// handleAbandonSession abandons an existing session and allows fresh matchmaking
+func (h *MessageHandler) handleAbandonSession(client *Client) {
+	h.hub.mu.Lock()
+
+	gameID, exists := h.hub.playerGames[client.Username]
+	if !exists {
+		h.hub.mu.Unlock()
+		log.Info().Str("username", client.Username).Msg("No session to abandon")
+		return
+	}
+
+	session, ok := h.hub.games[gameID]
+	if ok {
+		// Forfeit the game
+		playerColor := game.Player1
+		if session.Game.Player2 != nil && session.Game.Player2.Username == client.Username {
+			playerColor = game.Player2
+		}
+		session.Game.Forfeit(playerColor)
+
+		// Notify opponent if present
+		var opponent *Client
+		if playerColor == game.Player1 {
+			opponent = session.Player2
+		} else {
+			opponent = session.Player1
+		}
+		if opponent != nil && !opponent.closed {
+			opponent.SendMessage(models.WSTypeGameForfeited, models.GameForfeitedPayload{
+				Winner: opponent.Username,
+			})
+		}
+
+		// Clean up game
+		delete(h.hub.games, gameID)
+		delete(h.hub.playerGames, client.Username)
+		if session.Game.Player1.Username != client.Username {
+			delete(h.hub.playerGames, session.Game.Player1.Username)
+		}
+		if session.Game.Player2 != nil && session.Game.Player2.Username != client.Username {
+			delete(h.hub.playerGames, session.Game.Player2.Username)
+		}
+	}
+
+	h.hub.mu.Unlock()
+	log.Info().Str("username", client.Username).Msg("Session abandoned")
 }

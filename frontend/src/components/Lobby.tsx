@@ -22,12 +22,37 @@ export function Lobby({ onJoin, queuePosition, connected }: LobbyProps) {
         return (
             <div className="w-full flex flex-col items-center justify-center min-h-[50vh]">
                 <div className="text-center animate-fade-in">
-                    <h2 className="text-4xl font-bold mb-4 tracking-tighter">WAITING</h2>
-                    <div className="flex flex-col gap-2 text-stone-500 font-mono text-sm">
-                        <p>QUEUE POSITION: {queuePosition.toString().padStart(2, '0')}</p>
-                        <p>EST. TIME: 00:10</p>
+                    {/* Animated matching icon */}
+                    <div className="mb-8 relative">
+                        <div className="flex gap-3 justify-center items-center">
+                            {/* Left disc */}
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-700 shadow-lg shadow-red-500/30 animate-pulse" />
+
+                            {/* Connecting dots */}
+                            <div className="flex gap-1">
+                                <div className="w-2 h-2 rounded-full bg-stone-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 rounded-full bg-stone-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-2 h-2 rounded-full bg-stone-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+
+                            {/* Right disc */}
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg shadow-yellow-500/30 animate-pulse" style={{ animationDelay: '500ms' }} />
+                        </div>
                     </div>
-                    <div className="mt-8 w-16 h-0.5 bg-black animate-pulse mx-auto opacity-20" />
+
+                    <h2 className="text-3xl font-bold mb-2 tracking-tight">Finding Opponent...</h2>
+                    <p className="text-stone-500 font-mono text-sm mb-6">
+                        Queue Position: {queuePosition === 0 ? 'Searching...' : `#${queuePosition}`}
+                    </p>
+
+                    {/* Loading bar */}
+                    <div className="w-48 h-1 bg-stone-200 rounded-full overflow-hidden mx-auto">
+                        <div className="h-full w-1/3 bg-gradient-to-r from-red-500 to-yellow-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+                    </div>
+
+                    <p className="text-stone-400 text-xs mt-4 font-mono">
+                        {queuePosition === 0 ? 'Bot match in ~10s if no player found' : 'Waiting for players...'}
+                    </p>
                 </div>
             </div>
         );

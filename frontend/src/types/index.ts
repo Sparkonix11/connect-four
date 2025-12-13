@@ -36,6 +36,20 @@ export type GameForfeitedPayload = components['schemas']['GameForfeitedPayload']
 export type ErrorPayload = components['schemas']['ErrorPayload'];
 export type GameStatePayload = components['schemas']['GameStatePayload'];
 
+// Existing session payload (sent when player has active game)
+export interface ExistingSessionPayload {
+    gameId: string;
+    opponent: string;
+    isBot: boolean;
+}
+
 // Frontend state types
 export type GameState = components['schemas']['GameState'];
 export type GameOverState = components['schemas']['GameOverState'];
+
+// Existing session state for confirmation dialog
+export interface ExistingSession {
+    gameId: string;
+    opponent: string;
+    isBot: boolean;
+}
