@@ -10,6 +10,13 @@ export function Leaderboard() {
 
     useEffect(() => {
         fetchLeaderboard();
+
+        // Auto-refresh leaderboard every 30 seconds
+        const interval = setInterval(() => {
+            fetchLeaderboard();
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const fetchLeaderboard = async () => {

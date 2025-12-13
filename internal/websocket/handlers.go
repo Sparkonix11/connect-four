@@ -10,6 +10,7 @@ import (
 	"connect-four/internal/game"
 	"connect-four/internal/matchmaking"
 	"connect-four/internal/models"
+	"connect-four/internal/repository"
 )
 
 // MessageHandler processes incoming WebSocket messages
@@ -17,14 +18,16 @@ type MessageHandler struct {
 	hub        *Hub
 	matchQueue *matchmaking.Queue
 	botEngine  *bot.Bot
+	playerRepo *repository.PlayerRepository
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(hub *Hub, matchQueue *matchmaking.Queue) *MessageHandler {
+func NewMessageHandler(hub *Hub, matchQueue *matchmaking.Queue, playerRepo *repository.PlayerRepository) *MessageHandler {
 	return &MessageHandler{
 		hub:        hub,
 		matchQueue: matchQueue,
 		botEngine:  bot.NewBot(),
+		playerRepo: playerRepo,
 	}
 }
 
@@ -296,8 +299,73 @@ func (h *MessageHandler) handleGameOver(session *GameSession) {
 		Str("result", result).
 		Msg("Game ended")
 
-	// TODO: Persist game to database
-	// TODO: Publish to Kafka
+	// Persist game results to database
+	if h.playerRepo != nil {
+		// Create/get player records first
+		p1, err := h.playerRepo.Create(session.Game.Player1.Username)
+		if err != nil {
+			log.Error().Err(err).Str("username", session.Game.Player1.Username).Msg("Failed to create/get player")
+		}
+
+		var p2 *models.Player
+		if session.Game.Player2 != nil && !session.IsBot {
+			p2, err = h.playerRepo.Create(session.Game.Player2.Username)
+			if err != nil {
+				log.Error().Err(err).Str("username", session.Game.Player2.Username).Msg("Failed to create/get player")
+			}
+		}
+
+		// Update stats based on result
+		switch session.Game.Result {
+		case game.ResultPlayer1Win, game.ResultForfeit:
+			if session.Game.Winner == game.Player1 {
+				if p1 != nil {
+					if err := h.playerRepo.IncrementWins(p1.ID); err != nil {
+						log.Error().Err(err).Msg("Failed to increment wins")
+					}
+				}
+				if p2 != nil {
+					if err := h.playerRepo.IncrementLosses(p2.ID); err != nil {
+						log.Error().Err(err).Msg("Failed to increment losses")
+					}
+				}
+			} else if session.Game.Winner == game.Player2 {
+				if p2 != nil {
+					if err := h.playerRepo.IncrementWins(p2.ID); err != nil {
+						log.Error().Err(err).Msg("Failed to increment wins")
+					}
+				}
+				if p1 != nil {
+					if err := h.playerRepo.IncrementLosses(p1.ID); err != nil {
+						log.Error().Err(err).Msg("Failed to increment losses")
+					}
+				}
+			}
+		case game.ResultPlayer2Win:
+			if p2 != nil {
+				if err := h.playerRepo.IncrementWins(p2.ID); err != nil {
+					log.Error().Err(err).Msg("Failed to increment wins")
+				}
+			}
+			if p1 != nil {
+				if err := h.playerRepo.IncrementLosses(p1.ID); err != nil {
+					log.Error().Err(err).Msg("Failed to increment losses")
+				}
+			}
+		case game.ResultDraw:
+			if p1 != nil {
+				if err := h.playerRepo.IncrementDraws(p1.ID); err != nil {
+					log.Error().Err(err).Msg("Failed to increment draws")
+				}
+			}
+			if p2 != nil {
+				if err := h.playerRepo.IncrementDraws(p2.ID); err != nil {
+					log.Error().Err(err).Msg("Failed to increment draws")
+				}
+			}
+		}
+		log.Info().Msg("Game stats persisted to database")
+	}
 
 	// Cleanup will happen after some delay or on next message
 }

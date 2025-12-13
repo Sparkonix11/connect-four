@@ -42,7 +42,7 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 	// Create WebSocket infrastructure
 	hub := ws.NewHub(cfg.MatchmakingTimeout, cfg.ReconnectTimeout, cfg.BotMoveDelay)
 	matchQueue := matchmaking.NewQueue(cfg.MatchmakingTimeout)
-	messageHandler := ws.NewMessageHandler(hub, matchQueue)
+	messageHandler := ws.NewMessageHandler(hub, matchQueue, playerRepo)
 
 	// Create server
 	server := &Server{
