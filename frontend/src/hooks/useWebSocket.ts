@@ -83,6 +83,7 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
 
             case 'game_started': {
                 const payload = message.payload as GameStartedPayload;
+                console.log('GAME_STARTED:', payload);
                 setGameState({
                     gameId: payload.gameId,
                     opponent: payload.opponent,
@@ -97,6 +98,7 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
 
             case 'move_made': {
                 const payload = message.payload as MoveMadePayload;
+                console.log('MOVE_MADE:', payload);
                 setGameState(prev => prev ? {
                     ...prev,
                     board: payload.board,

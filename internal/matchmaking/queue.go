@@ -115,9 +115,9 @@ func (q *Queue) handleAdd(player *Player) {
 			Str("player2", player.Username).
 			Msg("Players matched")
 
-		// Notify both players
+		// Only call opponent's OnMatch callback to avoid calling startGame twice
+		// The opponent is player1 (arrived first), player is player2 (just arrived)
 		go opponent.OnMatch(player, false)
-		go player.OnMatch(opponent, false)
 		return
 	}
 
