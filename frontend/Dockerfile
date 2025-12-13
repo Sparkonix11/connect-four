@@ -9,14 +9,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source code (includes pre-generated types)
 COPY . .
 
-# Generate types from OpenAPI
-RUN npm run generate
+# Types are already generated and committed - no need to regenerate in Docker
+# If you need to regenerate, run `npm run generate` locally before building
 
-# Build the application
-RUN npm run build
+# Build the application (skip generate - types are pre-committed)
+RUN npm run build:docker
 
 # Runtime stage - serve with nginx
 FROM nginx:alpine

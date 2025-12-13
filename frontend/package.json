@@ -7,6 +7,7 @@
     "generate": "openapi-typescript ../api/openapi.yaml -o src/types/api.gen.ts",
     "dev": "npm run generate && vite",
     "build": "npm run generate && vite build",
+    "build:docker": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"

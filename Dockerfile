@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -26,9 +26,6 @@ RUN apk add --no-cache ca-certificates tzdata
 
 # Copy binary from builder
 COPY --from=builder /app/server .
-
-# Copy migrations
-COPY --from=builder /app/migrations ./migrations
 
 # Create non-root user
 RUN adduser -D -g '' appuser
