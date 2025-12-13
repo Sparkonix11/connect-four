@@ -1,10 +1,25 @@
+// =============================================================================
+// WEBSOCKET MESSAGE TYPES - Connect Four
+// =============================================================================
+// ⚠️  SYNC REQUIRED: These types MUST stay in sync with:
+//     - shared/types/types.ts (TypeScript frontend types)
+//     - shared/schema.json (JSON Schema - source of truth)
+//
+// When updating message types:
+// 1. Update shared/schema.json first (source of truth)
+// 2. Update this file to match
+// 3. Update shared/types/types.ts to match
+// 4. Run both `staticcheck ./...` and `npm run lint && npx tsc --noEmit`
+// =============================================================================
+
 package models
 
 import (
 	"time"
 )
 
-// WebSocket message types
+// WSMessageType defines the type of WebSocket message
+// SYNC: shared/schema.json -> definitions.WSMessageType
 type WSMessageType string
 
 const (
@@ -28,31 +43,43 @@ const (
 )
 
 // WSMessage is the envelope for WebSocket messages
+// SYNC: shared/schema.json -> definitions.WSMessage
 type WSMessage struct {
 	Type      WSMessageType `json:"type"`
 	Payload   interface{}   `json:"payload"`
 	Timestamp time.Time     `json:"timestamp"`
 }
 
-// Client -> Server payloads
+// =============================================================================
+// Client -> Server Payloads
+// =============================================================================
+
+// JoinQueuePayload - SYNC: shared/schema.json -> definitions.JoinQueuePayload
 type JoinQueuePayload struct {
 	Username string `json:"username"`
 }
 
+// MakeMovePayload - SYNC: shared/schema.json -> definitions.MakeMovePayload
 type MakeMovePayload struct {
-	Column int `json:"column"`
+	Column int `json:"column"` // 0-6
 }
 
+// ReconnectPayload - SYNC: shared/schema.json -> definitions.ReconnectPayload
 type ReconnectPayload struct {
 	GameID   string `json:"gameId"`
 	Username string `json:"username"`
 }
 
-// Server -> Client payloads
+// =============================================================================
+// Server -> Client Payloads
+// =============================================================================
+
+// QueueJoinedPayload - SYNC: shared/schema.json -> definitions.QueueJoinedPayload
 type QueueJoinedPayload struct {
 	Position int `json:"position"`
 }
 
+// GameStartedPayload - SYNC: shared/schema.json -> definitions.GameStartedPayload
 type GameStartedPayload struct {
 	GameID    string `json:"gameId"`
 	Opponent  string `json:"opponent"`
@@ -60,40 +87,47 @@ type GameStartedPayload struct {
 	YourColor int    `json:"yourColor"` // 1 = Red, 2 = Yellow
 }
 
+// MoveMadePayload - SYNC: shared/schema.json -> definitions.MoveMadePayload
 type MoveMadePayload struct {
 	Column int     `json:"column"`
 	Row    int     `json:"row"`
-	Player int     `json:"player"`
-	Board  [][]int `json:"board"`
+	Player int     `json:"player"` // 1 or 2
+	Board  [][]int `json:"board"`  // 6 rows x 7 columns, 0=empty, 1=P1, 2=P2
 }
 
+// InvalidMovePayload - SYNC: shared/schema.json -> definitions.InvalidMovePayload
 type InvalidMovePayload struct {
 	Reason string `json:"reason"`
 }
 
+// GameOverPayload - SYNC: shared/schema.json -> definitions.GameOverPayload
 type GameOverPayload struct {
-	Winner     string  `json:"winner"` // username or "draw"
-	Result     string  `json:"result"` // "win", "loss", "draw"
-	FinalBoard [][]int `json:"finalBoard"`
+	Winner     string  `json:"winner"`     // username or "draw"
+	Result     string  `json:"result"`     // "win", "loss", "draw", "forfeit"
+	FinalBoard [][]int `json:"finalBoard"` // Final board state
 }
 
+// OpponentDisconnectedPayload - SYNC: shared/schema.json -> definitions.OpponentDisconnectedPayload
 type OpponentDisconnectedPayload struct {
-	Timeout int `json:"timeout"` // seconds remaining
+	Timeout int `json:"timeout"` // seconds remaining for reconnect
 }
 
+// GameForfeitedPayload - SYNC: shared/schema.json -> definitions.GameForfeitedPayload
 type GameForfeitedPayload struct {
 	Winner string `json:"winner"`
 }
 
+// ErrorPayload - SYNC: shared/schema.json -> definitions.ErrorPayload
 type ErrorPayload struct {
 	Message string `json:"message"`
 }
 
+// GameStatePayload - SYNC: shared/schema.json -> definitions.GameStatePayload
 type GameStatePayload struct {
 	GameID      string  `json:"gameId"`
-	Board       [][]int `json:"board"`
-	CurrentTurn int     `json:"currentTurn"`
-	YourColor   int     `json:"yourColor"`
+	Board       [][]int `json:"board"`       // 6 rows x 7 columns
+	CurrentTurn int     `json:"currentTurn"` // 1 or 2
+	YourColor   int     `json:"yourColor"`   // 1 or 2
 	YourTurn    bool    `json:"yourTurn"`
 	Opponent    string  `json:"opponent"`
 }

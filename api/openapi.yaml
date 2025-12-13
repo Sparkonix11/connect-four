@@ -1,0 +1,416 @@
+openapi: 3.0.3
+info:
+  title: Connect Four API
+  description: Real-time Connect Four game API with WebSocket support
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/players:
+    post:
+      summary: Create or get player
+      operationId: createPlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlayerRequest'
+      responses:
+        '200':
+          description: Player created or retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+
+  /api/players/{id}:
+    get:
+      summary: Get player by ID
+      operationId: getPlayer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Player found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '404':
+          description: Player not found
+
+  /api/players/{id}/games:
+    get:
+      summary: Get player's game history
+      operationId: getPlayerGames
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameRecord'
+
+  /api/leaderboard:
+    get:
+      summary: Get leaderboard
+      operationId: getLeaderboard
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        '200':
+          description: Top players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+
+  /api/games/{id}:
+    get:
+      summary: Get game by ID
+      operationId: getGame
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Game found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameRecord'
+        '404':
+          description: Game not found
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    CreatePlayerRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 50
+
+    Player:
+      type: object
+      required: [id, username, wins, losses, draws, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        wins:
+          type: integer
+        losses:
+          type: integer
+        draws:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, username, wins, losses, draws, games]
+      properties:
+        rank:
+          type: integer
+        username:
+          type: string
+        wins:
+          type: integer
+        losses:
+          type: integer
+        draws:
+          type: integer
+        games:
+          type: integer
+
+    GameRecord:
+      type: object
+      required: [id, player1Id, isBotGame, startedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        player1Id:
+          type: string
+          format: uuid
+        player2Id:
+          type: string
+          format: uuid
+          nullable: true
+        isBotGame:
+          type: boolean
+        winnerId:
+          type: string
+          format: uuid
+          nullable: true
+        result:
+          type: string
+          enum: [player1, player2, draw, forfeit]
+        moves:
+          type: string
+          description: JSON-encoded moves
+        durationSeconds:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # WebSocket Message Types
+    WSMessageType:
+      type: string
+      enum:
+        - join_queue
+        - make_move
+        - reconnect
+        - leave_game
+        - queue_joined
+        - game_started
+        - move_made
+        - invalid_move
+        - game_over
+        - opponent_disconnected
+        - opponent_reconnected
+        - game_forfeited
+        - error
+        - game_state
+
+    WSMessage:
+      type: object
+      required: [type, payload, timestamp]
+      properties:
+        type:
+          $ref: '#/components/schemas/WSMessageType'
+        payload:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    # Client -> Server Payloads
+    JoinQueuePayload:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+
+    MakeMovePayload:
+      type: object
+      required: [column]
+      properties:
+        column:
+          type: integer
+          minimum: 0
+          maximum: 6
+
+    ReconnectPayload:
+      type: object
+      required: [gameId, username]
+      properties:
+        gameId:
+          type: string
+        username:
+          type: string
+
+    # Server -> Client Payloads
+    QueueJoinedPayload:
+      type: object
+      required: [position]
+      properties:
+        position:
+          type: integer
+
+    GameStartedPayload:
+      type: object
+      required: [gameId, opponent, yourTurn, yourColor]
+      properties:
+        gameId:
+          type: string
+        opponent:
+          type: string
+        yourTurn:
+          type: boolean
+        yourColor:
+          type: integer
+          enum: [1, 2]
+          description: "1 = Red, 2 = Yellow"
+
+    Board:
+      type: array
+      items:
+        type: array
+        items:
+          type: integer
+      description: "6 rows x 7 columns, 0=empty, 1=Player1, 2=Player2"
+
+    MoveMadePayload:
+      type: object
+      required: [column, row, player, board]
+      properties:
+        column:
+          type: integer
+        row:
+          type: integer
+        player:
+          type: integer
+          enum: [1, 2]
+        board:
+          $ref: '#/components/schemas/Board'
+
+    InvalidMovePayload:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    GameOverPayload:
+      type: object
+      required: [winner, result, finalBoard]
+      properties:
+        winner:
+          type: string
+          description: "username or 'draw'"
+        result:
+          type: string
+          enum: [win, loss, draw, forfeit]
+        finalBoard:
+          $ref: '#/components/schemas/Board'
+
+    OpponentDisconnectedPayload:
+      type: object
+      required: [timeout]
+      properties:
+        timeout:
+          type: integer
+          description: seconds remaining for reconnect
+
+    GameForfeitedPayload:
+      type: object
+      required: [winner]
+      properties:
+        winner:
+          type: string
+
+    ErrorPayload:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    GameStatePayload:
+      type: object
+      required: [gameId, board, currentTurn, yourColor, yourTurn, opponent]
+      properties:
+        gameId:
+          type: string
+        board:
+          $ref: '#/components/schemas/Board'
+        currentTurn:
+          type: integer
+          enum: [1, 2]
+        yourColor:
+          type: integer
+          enum: [1, 2]
+        yourTurn:
+          type: boolean
+        opponent:
+          type: string
+
+    # Frontend State Types
+    GameState:
+      type: object
+      required: [gameId, opponent, yourTurn, yourColor, board]
+      properties:
+        gameId:
+          type: string
+        opponent:
+          type: string
+        yourTurn:
+          type: boolean
+        yourColor:
+          type: integer
+          enum: [1, 2]
+        board:
+          $ref: '#/components/schemas/Board'
+
+    GameOverState:
+      type: object
+      required: [winner, result]
+      properties:
+        winner:
+          type: string
+        result:
+          type: string
+          enum: [win, loss, draw, forfeit]
+        finalBoard:
+          $ref: '#/components/schemas/Board'
