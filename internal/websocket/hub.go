@@ -64,6 +64,11 @@ func NewHub(matchmakingTimeout, reconnectTimeout, botMoveDelay time.Duration) *H
 	}
 }
 
+// Register sends a client to the register channel
+func (h *Hub) Register(client *Client) {
+	h.register <- client
+}
+
 // Run starts the hub's main event loop
 func (h *Hub) Run() {
 	for {

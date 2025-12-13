@@ -8,11 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"connect-four/internal/api"
+	"connect-four/internal/database"
+	"connect-four/internal/models"
 	"connect-four/pkg/config"
 )
 
@@ -24,21 +26,22 @@ func main() {
 	cfg := config.Load()
 	log.Info().Str("port", cfg.ServerPort).Msg("Starting Connect Four server")
 
-	// Create router
-	router := mux.NewRouter()
+	// Connect to database
+	db, err := database.NewDB(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
+	defer database.Close(db)
 
-	// Health check endpoint
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	}).Methods("GET")
+	// Run migrations (auto-migrate GORM models)
+	if err := models.AutoMigrate(db); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run database migrations")
+	}
+	log.Info().Msg("Database migrations completed")
 
-	// API routes will be added here
-	apiRouter := router.PathPrefix("/api").Subrouter()
-	_ = apiRouter // Placeholder for future routes
-
-	// WebSocket endpoint will be added here
-	// router.HandleFunc("/ws", wsHandler)
+	// Create API server
+	server := api.NewServer(db, cfg)
+	server.Start()
 
 	// CORS configuration
 	c := cors.New(cors.Options{
@@ -48,10 +51,10 @@ func main() {
 		AllowCredentials: true,
 	})
 
-	// Create server
-	server := &http.Server{
+	// Create HTTP server
+	httpServer := &http.Server{
 		Addr:         cfg.ServerHost + ":" + cfg.ServerPort,
-		Handler:      c.Handler(router),
+		Handler:      c.Handler(server.Router),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -60,7 +63,7 @@ func main() {
 	// Start server in goroutine
 	go func() {
 		log.Info().Msgf("Server listening on http://%s:%s", cfg.ServerHost, cfg.ServerPort)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
@@ -75,7 +78,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 
