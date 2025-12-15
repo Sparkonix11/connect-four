@@ -11,7 +11,7 @@ export type GameRecord = components['schemas']['GameRecord'];
 export type Board = components['schemas']['Board'];
 
 // WebSocket types
-export type WSMessageType = components['schemas']['WSMessageType'];
+export type WSMessageType = components['schemas']['WSMessageType'] | 'existing_session';
 
 // Generic WSMessage that accepts any payload (for incoming messages)
 export interface WSMessage {

@@ -14,6 +14,7 @@ import type {
     GameStatePayload,
     ExistingSessionPayload,
     ExistingSession,
+    WSMessageType,
 } from '../types';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
@@ -81,7 +82,7 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
     const handleMessage = (message: WSMessage) => {
         console.log('Received:', message.type, message.payload);
 
-        switch (message.type) {
+        switch (message.type as WSMessageType) {
             case 'queue_joined': {
                 const payload = message.payload as QueueJoinedPayload;
                 setQueuePosition(payload.position);
