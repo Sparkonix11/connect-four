@@ -67,7 +67,7 @@ func NewServer(db *gorm.DB, cfg *config.Config, kafkaProducer *kafka.Producer) *
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
-	}).Methods("GET")
+	}).Methods("GET", "HEAD")
 
 	// API routes
 	api := router.PathPrefix("/api").Subrouter()
