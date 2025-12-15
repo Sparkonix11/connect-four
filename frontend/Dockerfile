@@ -12,6 +12,14 @@ RUN npm ci
 # Copy source code (includes pre-generated types)
 COPY . .
 
+# Accept build arguments for Vite environment variables
+ARG VITE_API_URL
+ARG VITE_WS_URL
+
+# Make them available as environment variables during build
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+
 # Types are already generated and committed - no need to regenerate in Docker
 # If you need to regenerate, run `npm run generate` locally before building
 
