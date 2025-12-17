@@ -2,10 +2,13 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/plain"
 )
 
 // Consumer handles consuming events from Kafka for analytics
@@ -14,22 +17,41 @@ type Consumer struct {
 	enabled bool
 }
 
-// NewConsumer creates a new Kafka consumer
-func NewConsumer(brokers, topic, groupID string, enabled bool) *Consumer {
+// NewConsumer creates a new Kafka consumer with optional SASL authentication
+func NewConsumer(brokers, topic, groupID string, enabled bool, username, password string) *Consumer {
 	if !enabled {
 		log.Info().Msg("Kafka consumer disabled")
 		return &Consumer{enabled: false}
 	}
 
-	reader := kafka.NewReader(kafka.ReaderConfig{
+	readerConfig := kafka.ReaderConfig{
 		Brokers:  []string{brokers},
 		Topic:    topic,
 		GroupID:  groupID,
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
-	})
+	}
 
-	log.Info().Str("brokers", brokers).Str("topic", topic).Str("groupId", groupID).Msg("Kafka consumer created")
+	// If username and password provided, use SASL/PLAIN with TLS
+	if username != "" && password != "" {
+		mechanism := plain.Mechanism{
+			Username: username,
+			Password: password,
+		}
+
+		readerConfig.Dialer = &kafka.Dialer{
+			Timeout:       10 * time.Second,
+			DualStack:     true,
+			SASLMechanism: mechanism,
+			TLS:           &tls.Config{MinVersion: tls.VersionTLS12},
+		}
+
+		log.Info().Str("brokers", brokers).Str("topic", topic).Str("groupId", groupID).Msg("Kafka consumer created with SASL/PLAIN authentication")
+	} else {
+		log.Info().Str("brokers", brokers).Str("topic", topic).Str("groupId", groupID).Msg("Kafka consumer created (no authentication)")
+	}
+
+	reader := kafka.NewReader(readerConfig)
 	return &Consumer{reader: reader, enabled: true}
 }
 

@@ -2,12 +2,14 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/plain"
 )
 
 // EventType defines the types of events we publish
@@ -36,23 +38,58 @@ type Producer struct {
 	enabled bool
 }
 
-// NewProducer creates a new Kafka producer
-func NewProducer(brokers, topic string, enabled bool) *Producer {
+// NewProducer creates a new Kafka producer with optional SASL authentication
+func NewProducer(brokers, topic string, enabled bool, username, password string) *Producer {
 	if !enabled {
 		log.Info().Msg("Kafka producer disabled")
 		return &Producer{enabled: false}
 	}
 
-	writer := &kafka.Writer{
-		Addr:         kafka.TCP(brokers),
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		BatchSize:    100,
-		BatchTimeout: 10 * time.Millisecond,
-		RequiredAcks: kafka.RequireOne,
+	var writer *kafka.Writer
+
+	// If username and password provided, use SASL/PLAIN with TLS
+	if username != "" && password != "" {
+		mechanism := plain.Mechanism{
+			Username: username,
+			Password: password,
+		}
+
+		dialer := &kafka.Dialer{
+			Timeout:       10 * time.Second,
+			DualStack:     true,
+			SASLMechanism: mechanism,
+			TLS:           &tls.Config{MinVersion: tls.VersionTLS12},
+		}
+
+		transport := &kafka.Transport{
+			Dial: dialer.DialFunc,
+		}
+
+		writer = &kafka.Writer{
+			Addr:         kafka.TCP(brokers),
+			Topic:        topic,
+			Balancer:     &kafka.LeastBytes{},
+			BatchSize:    100,
+			BatchTimeout: 10 * time.Millisecond,
+			RequiredAcks: kafka.RequireOne,
+			Transport:    transport,
+		}
+
+		log.Info().Str("brokers", brokers).Str("topic", topic).Msg("Kafka producer created with SASL/PLAIN authentication")
+	} else {
+		// For local setup without credentials, don't set Transport field
+		writer = &kafka.Writer{
+			Addr:         kafka.TCP(brokers),
+			Topic:        topic,
+			Balancer:     &kafka.LeastBytes{},
+			BatchSize:    100,
+			BatchTimeout: 10 * time.Millisecond,
+			RequiredAcks: kafka.RequireOne,
+		}
+
+		log.Info().Str("brokers", brokers).Str("topic", topic).Msg("Kafka producer created (no authentication)")
 	}
 
-	log.Info().Str("brokers", brokers).Str("topic", topic).Msg("Kafka producer created")
 	return &Producer{writer: writer, enabled: true}
 }
 

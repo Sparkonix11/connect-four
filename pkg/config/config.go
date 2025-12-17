@@ -19,8 +19,10 @@ type Config struct {
 	DatabaseURL string
 
 	// Kafka
-	KafkaBrokers  string
+	KafkaBrokers     string
 	KafkaTopicEvents string
+	KafkaUsername    string
+	KafkaPassword    string
 
 	// Game settings
 	MatchmakingTimeout time.Duration // Time before bot is assigned
@@ -44,6 +46,8 @@ func Load() *Config {
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/connect_four?sslmode=disable"),
 		KafkaBrokers:       getEnv("KAFKA_BROKERS", "localhost:9092"),
 		KafkaTopicEvents:   getEnv("KAFKA_TOPIC_EVENTS", "game-events"),
+		KafkaUsername:      getEnv("KAFKA_USERNAME", ""),
+		KafkaPassword:      getEnv("KAFKA_PASSWORD", ""),
 		MatchmakingTimeout: getDurationEnv("MATCHMAKING_TIMEOUT_SECONDS", 10) * time.Second,
 		ReconnectTimeout:   getDurationEnv("RECONNECT_TIMEOUT_SECONDS", 30) * time.Second,
 		BotMoveDelay:       getDurationEnv("BOT_MOVE_DELAY_MS", 300) * time.Millisecond,

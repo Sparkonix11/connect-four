@@ -41,11 +41,11 @@ func main() {
 	log.Info().Msg("Database migrations completed")
 
 	// Create Kafka producer
-	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, cfg.KafkaEnabled)
+	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, cfg.KafkaEnabled, cfg.KafkaUsername, cfg.KafkaPassword)
 	defer kafkaProducer.Close()
 
 	// Create Kafka consumer for analytics
-	kafkaConsumer := kafka.NewConsumer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, "connect-four-analytics", cfg.KafkaEnabled)
+	kafkaConsumer := kafka.NewConsumer(cfg.KafkaBrokers, cfg.KafkaTopicEvents, "connect-four-analytics", cfg.KafkaEnabled, cfg.KafkaUsername, cfg.KafkaPassword)
 	defer kafkaConsumer.Close()
 
 	// Create context for graceful shutdown
