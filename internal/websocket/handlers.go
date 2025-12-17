@@ -387,7 +387,8 @@ func (h *MessageHandler) handleGameOver(session *GameSession) {
 		h.kafkaProducer.PublishGameEnded(context.Background(), session.Game.ID, winnerName, result, 0, len(session.Game.Moves))
 	}
 
-	// Cleanup will happen after some delay or on next message
+	// Cleanup the game session
+	h.hub.cleanupGame(session)
 }
 
 // handleLeaveGame handles voluntary game exit (forfeit)

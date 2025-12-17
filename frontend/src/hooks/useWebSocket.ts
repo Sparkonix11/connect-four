@@ -117,6 +117,7 @@ export function useWebSocket(username: string | null): UseWebSocketReturn {
 
             case 'invalid_move': {
                 const payload = message.payload as InvalidMovePayload;
+                console.log('INVALID_MOVE:', payload.reason);
                 setError(payload.reason);
                 setTimeout(() => setError(null), 3000);
                 break;

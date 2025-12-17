@@ -37,6 +37,7 @@ function App() {
     const handlePlayAgain = useCallback(() => {
         // Reset game state without sending leave message (game is already over)
         resetGame();
+        hasCheckedSession.current = false;
         setTimeout(() => joinQueue(), 100);
     }, [joinQueue, resetGame]);
 
